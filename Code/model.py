@@ -4,6 +4,7 @@ import seaborn as sns
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
 
 file = r'C:\Users\admin\Desktop\Stage4eme\Code\CompositionPortefeuille.xls'
 
@@ -16,76 +17,6 @@ print("\nData Info:")
 print(df.info())
 print("\nData Description:")
 print(df.describe())
-
-# Exploratory Data Analysis (EDA)
-# 1. Distribution of numerical features
-df.hist(bins=20, figsize=(15, 8))
-plt.suptitle('Distribution of Numerical Features')
-plt.show()
-
-# 2. Correlation Heatmap
-plt.figure(figsize=(12, 8))
-sns.heatmap(df.select_dtypes(include=['number']).corr(), annot=True, cmap='coolwarm')
-plt.title('Correlation Heatmap')
-plt.show()
-
-# 3. Pair Plot (Include only numerical columns)
-numerical_features = df.select_dtypes(include=['number']).columns
-if len(numerical_features) > 0:
-    sns.pairplot(df[numerical_features])
-    plt.suptitle('Pair Plot of Numerical Features', y=1.02)
-    plt.show()
-
-# 4. Count Plot for Categorical Features
-# Get categorical features
-relevant_categorical_features = [
-    'Etat du dossier',
-    'Titre de civilité de l\'assuré',
-    'Profession de l\'assuré',
-    'Ville de l\'assuré'
-]
-
-# Number of relevant categorical features
-num_features = len(relevant_categorical_features)
-num_cols = 2  # Number of columns in the subplot grid
-num_rows = (num_features + num_cols - 1) // num_cols  # Compute number of rows needed
-
-# Create a wide figure
-plt.figure(figsize=(15, 5 * num_rows))
-
-for i, feature in enumerate(relevant_categorical_features):
-    plt.subplot(num_rows, num_cols, i + 1)
-    sns.countplot(y=df[feature], order=df[feature].value_counts().index)  # Order by frequency for better visualization
-    plt.title(f'Count Plot for {feature}')
-    plt.xlabel('')
-    plt.ylabel('')
-
-plt.tight_layout()
-plt.show()
-
-# 5. Box Plot for Numerical Features
-numerical_features = df.select_dtypes(include=['number']).columns
-num_numerical_features = len(numerical_features)
-num_cols = 3  # Number of columns in the subplot grid
-num_rows = (num_numerical_features + num_cols - 1) // num_cols  # Compute number of rows needed
-
-plt.figure(figsize=(15, 5 * num_rows))
-
-for i, feature in enumerate(numerical_features):
-    plt.subplot(num_rows, num_cols, i + 1)
-    sns.boxplot(x=df[feature])
-    plt.title(f'Box Plot for {feature}')
-    plt.xlabel('')
-    plt.ylabel('')
-
-plt.tight_layout()
-plt.show()
-
-# 7. Missing Values Heatmap
-plt.figure(figsize=(12, 8))
-sns.heatmap(df.isnull(), cbar=False, cmap='viridis')
-plt.title('Missing Values Heatmap')
-plt.show()
 
 # Renaming columns
 df.rename(columns={
@@ -125,13 +56,26 @@ print("\nMissing Values:")
 print(df.isnull().sum())
 df = df.dropna()
 
-# Display the first few rows of the cleaned dataset
-print("\nClean Data Head:")
-print(df.head())
-
 # Select relevant columns for analysis
 relevant_columns = ['PolicyNumber', 'Insured', 'Gender', 'DateOfBirth', 'City', 'SumInsured', 'Premium', 'PremiumFrequency', 'MathematicalProvision', 'Product', 'TotalPremiums', 'Age', 'Duration']
-df_relevant = df[relevant_columns]
+df_relevant = df[relevant_columns].copy()
+
+# Detecting and handling outliers
+q1 = df_relevant[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']].quantile(0.25)
+q3 = df_relevant[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']].quantile(0.75)
+iqr = q3 - q1
+outlier_mask = ((df_relevant[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']] < (q1 - 1.5 * iqr)) | (df_relevant[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']] > (q3 + 1.5 * iqr))).any(axis=1)
+outliers = df_relevant.loc[outlier_mask]
+
+print("Outliers dropped:")
+print(outliers)
+
+# Remove outliers
+df_relevant = df_relevant[~outlier_mask]
+
+# Display the first few rows of the cleaned dataset
+print("\nClean Data Head:")
+print(df_relevant.head())
 
 # Encode categorical variables
 le = LabelEncoder()
@@ -141,29 +85,70 @@ df_relevant['Product'] = le.fit_transform(df_relevant['Product'])
 
 # Standardize numerical features
 scaler = StandardScaler()
-df_relevant[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']] = scaler.fit_transform(df_relevant[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']])
+df_relevant_scaled = df_relevant.copy()
+df_relevant_scaled[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']] = scaler.fit_transform(df_relevant[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']])
 
 # Perform Principal Component Analysis (PCA)
 pca = PCA(n_components=3)
-X_pca = pca.fit_transform(df_relevant[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']])
-df_relevant['PC1'] = X_pca[:, 0]
-df_relevant['PC2'] = X_pca[:, 1]
-df_relevant['PC3'] = X_pca[:, 2]
+X_pca = pca.fit_transform(df_relevant_scaled[['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']])
+df_relevant_scaled['PC1'] = X_pca[:, 0]
+df_relevant_scaled['PC2'] = X_pca[:, 1]
+df_relevant_scaled['PC3'] = X_pca[:, 2]
 
-# Perform K-Means Clustering
-kmeans = KMeans(n_clusters=5, random_state=42)
-df_relevant['Cluster'] = kmeans.fit_predict(df_relevant[['PC1', 'PC2', 'PC3']])
+# Elbow method for optimal number of clusters
+SSE = []
+for cluster in range(1, 10):
+    kmeans = KMeans(n_clusters=cluster, init='k-means++')
+    kmeans.fit(df_relevant_scaled[['PC1', 'PC2', 'PC3']])
+    SSE.append(kmeans.inertia_)
+
+# Plotting the elbow method results
+frame = pd.DataFrame({'Cluster': range(1, 10), 'SSE': SSE})
+plt.figure(figsize=(12, 6))
+plt.plot(frame['Cluster'], frame['SSE'], marker='o')
+plt.xlabel('Number of clusters')
+plt.ylabel('Inertia')
+plt.title('Elbow Method for Optimal Number of Clusters')
+plt.show()
+
+# Perform K-Means Clustering with the chosen number of clusters (in our case, 4 is the ideal number)
+kmeans = KMeans(n_clusters=4, random_state=42)
+df_relevant_scaled['Cluster'] = kmeans.fit_predict(df_relevant_scaled[['PC1', 'PC2', 'PC3']])
+
+# Calculate and print the silhouette score
+sil_score = silhouette_score(df_relevant_scaled[['PC1', 'PC2', 'PC3']], kmeans.labels_, metric='euclidean')
+print(f'Silhouette Score: {sil_score}')
 
 # Visualize the clusters
 plt.figure(figsize=(10, 8))
-sns.scatterplot(x='PC1', y='PC2', hue='Cluster', data=df_relevant)
+sns.scatterplot(x='PC1', y='PC2', hue='Cluster', data=df_relevant_scaled, palette='viridis')
 plt.title('K-Means Clustering on Principal Components')
 plt.show()
 
 # Analyze cluster characteristics
 print("\nCluster Characteristics:")
-for cluster in df_relevant['Cluster'].unique():
-    cluster_data = df_relevant[df_relevant['Cluster'] == cluster]
+for cluster in df_relevant_scaled['Cluster'].unique():
+    cluster_data = df_relevant[df_relevant_scaled['Cluster'] == cluster]
     print(f"Cluster {cluster}:")
     print(cluster_data.describe())
     print()
+
+# Assign clusters to each customer in the original dataset
+df_relevant['Cluster'] = kmeans.predict(df_relevant_scaled[['PC1', 'PC2', 'PC3']])
+
+# Compute the average values for each cluster
+# Select only numerical columns for aggregation
+numeric_columns = ['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']
+avg_df = df_relevant.groupby('Cluster')[numeric_columns].mean().reset_index()
+
+# List of features to plot
+features_to_plot = ['SumInsured', 'Premium', 'MathematicalProvision', 'TotalPremiums', 'Age', 'Duration']
+
+# Plot the average values of each feature for each cluster
+for feature in features_to_plot:
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x='Cluster', y=feature, data=avg_df, palette='viridis')
+    plt.title(f'Average {feature} per Cluster')
+    plt.xlabel('Cluster')
+    plt.ylabel(f'Average {feature}')
+    plt.show()
