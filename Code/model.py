@@ -4,7 +4,7 @@ import seaborn as sns
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 
 file = r'C:\Users\admin\Desktop\Stage4eme\Code\CompositionPortefeuille.xls'
 
@@ -118,6 +118,14 @@ df_relevant_scaled['Cluster'] = kmeans.fit_predict(df_relevant_scaled[['PC1', 'P
 # Calculate and print the silhouette score
 sil_score = silhouette_score(df_relevant_scaled[['PC1', 'PC2', 'PC3']], kmeans.labels_, metric='euclidean')
 print(f'Silhouette Score: {sil_score}')
+
+# Compute Davies-Bouldin Index
+db_index = davies_bouldin_score(df_relevant_scaled[['PC1', 'PC2', 'PC3']], df_relevant_scaled['Cluster'])
+print(f'Davies-Bouldin Index: {db_index:.4f}')
+
+# Compute Inertia (Within-Cluster Sum of Squares)
+inertia = kmeans.inertia_
+print(f'Inertia: {inertia:.4f}')
 
 # Visualize the clusters
 plt.figure(figsize=(10, 8))
