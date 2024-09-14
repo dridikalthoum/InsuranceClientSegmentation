@@ -12,6 +12,13 @@ from sklearn.manifold import TSNE
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from scipy import stats
 import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.tree import plot_tree
+
 
 # Load dataset
 file = r'C:\Users\admin\Desktop\Stage4eme\Code\CompositionPortefeuille.xls'
@@ -25,6 +32,7 @@ print(df.info())
 print("\nData Description:")
 print(df.describe())
 
+print(df["Profession de l'assuré"].unique())
 
 # Renaming columns
 df.rename(columns={
@@ -35,7 +43,6 @@ df.rename(columns={
     "Titre de civilité de l'assuré": "Title",
     "Adresse de l'assuré": "Address",
     "Ville de l'assuré": "City",
-    "Profession de l'assuré": "Occupation",
     "DateEffet": "EffectiveDate",
     "DateEcheance": "ExpirationDate",
     "Etat du dossier": "PolicyStatus",
@@ -50,6 +57,55 @@ df.rename(columns={
 date_cols = ['DateOfBirth', 'EffectiveDate', 'ExpirationDate']
 for col in date_cols:
     df[col] = pd.to_datetime(df[col])
+
+# Define standardization function
+def standardize_occupation(occupation):
+    if pd.isna(occupation):
+        return 'Unknown'
+    occupation = occupation.upper().strip()  # Convert to uppercase and remove leading/trailing spaces
+    if 'DIRECTEUR' in occupation:
+        return 'Directeur'
+    elif 'CADRE DE BANQUE' in occupation:
+        return 'Cadre de banque'
+    elif 'AGENT GENERAL' in occupation:
+        return 'Agent général'
+    elif 'ENSEIGNANT' in occupation or 'PROFESSEUR' in occupation:
+        return 'Enseignant'
+    elif 'SURVEILLANT DE TRAVAUX' in occupation or 'FONCTIONNAIRE' in occupation:
+        return 'Fonctionnaire'
+    elif 'MEDECIN' in occupation:
+        return 'Médecin'
+    elif 'RETRAITE' in occupation:
+        return 'Retraite'
+    else:
+        return 'Unknown'
+
+# Apply standardization
+df["Profession de l'assuré"] = df["Profession de l'assuré"].apply(standardize_occupation)
+
+# Check the unique values after standardization
+print(df["Profession de l'assuré"].unique())
+
+# Rename the column
+df.rename(columns={"Profession de l'assuré": "Occupation"}, inplace=True)
+
+# Encode Occupation with ordinal values
+occupation_mapping = {
+    'Directeur': 1, 
+    'Cadre de banque': 1, 
+    'Agent général': 1,
+    'Médecin': 2, 
+    'Enseignant': 3, 
+    'Professeur': 3,
+    'Surveillant de travaux': 4, 
+    'Fonctionnaire': 4,
+    'Retraite': 5,
+    'Unknown': 0
+}
+
+# Replace NaN values with 'Unknown'
+df['Occupation'] = df['Occupation'].replace(np.nan, 'Unknown')
+df['Occupation'] = df['Occupation'].map(occupation_mapping)
 
 # Select only the numerical columns for correlation matrix calculation
 numerical_cols = df.select_dtypes(include=[np.number])
@@ -250,6 +306,7 @@ sns.scatterplot(x='PC1', y='PC2', hue='Hierarchical_Cluster', data=df_relevant_s
 plt.title('Hierarchical Clustering on Principal Components')
 plt.show()
 
+
 # Random Forest Regressor Setup
 X = df_relevant_scaled.drop(['PolicyNumber', 'Insured', 'Gender', 'City', 'Product', 'KMeans_Cluster', 'DBSCAN_Cluster', 'Hierarchical_Cluster'], axis=1)
 y = df_relevant_scaled['Premium']  # Assuming Premium is the target variable
@@ -273,18 +330,31 @@ plt.figure(figsize=(12, 6))
 shap.summary_plot(shap_values, X_test)
 plt.show()
 
-# Calculate the centroids for the key features
-centroids = df_relevant_scaled.groupby('KMeans_Cluster')[['Age', 'SumInsured', 'Premium', 'MathematicalProvision', 
-                                                          'Duration', 'ClaimSeverity', 'LifetimeValue', 
-                                                          'CustomerTenure', 'AverageClaimAmount']].mean()
+# Assume df_original contains the original unscaled data
+# and df_relevant_scaled contains the scaled data with KMeans clusters
 
-# Add the mode (most frequent value) for categorical features
-centroids['Gender'] = df_relevant_scaled.groupby('KMeans_Cluster')['Gender'].apply(lambda x: x.mode()[0])
-centroids['Occupation'] = df_relevant_scaled.groupby('KMeans_Cluster')['Occupation'].apply(lambda x: x.mode()[0])
+# Add KMeans cluster labels from the scaled data to the original data
+df_relevant['KMeans_Cluster'] = df_relevant_scaled['KMeans_Cluster']
 
-# Convert Gender encoding back to labels
-centroids['Gender'] = centroids['Gender'].replace({0: 'Female', 1: 'Male'})
+# Calculate the average values for original features grouped by KMeans clusters
+original_features_summary = df_relevant.groupby('KMeans_Cluster')[['Age', 'Duration', 'Premium', 'SumInsured', 'AverageClaimAmount', 'CustomerTenure', 'ClaimSeverity']].mean()
 
-# Display the centroids for each cluster
-print("Centroid values for each cluster:")
-print(centroids)
+print("\nOriginal Numerical Features Summary for KMeans Clustering:")
+print(original_features_summary)
+
+
+# Calculate the average values for original features grouped by KMeans clusters
+features_summary = df_relevant_scaled.groupby('KMeans_Cluster')[['Gender', 'Occupation', 'City', 'Product']].mean()
+print("\nScaled Features Summary for KMeans Clustering:")
+print(features_summary)
+
+# Assuming df_relevant_scaled has 'KMeans_Cluster' as well
+scaled_features_summary = df_relevant_scaled.groupby('KMeans_Cluster')[['Age', 'Duration', 'Premium', 'SumInsured', 'AverageClaimAmount', 'CustomerTenure', 'ClaimSeverity', 'Gender', 'Occupation', 'Product']].mean()
+
+# Plot average feature values for each KMeans cluster using scaled data
+scaled_features_summary.plot(kind='bar', figsize=(15, 8))
+plt.title('Average Scaled Feature Values for KMeans Clusters')
+plt.xlabel('Cluster')
+plt.ylabel('Scaled Value')
+plt.legend(loc='best')
+plt.show()
