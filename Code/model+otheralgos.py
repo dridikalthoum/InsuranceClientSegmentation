@@ -18,6 +18,8 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.tree import plot_tree
+from scipy.stats import gaussian_kde
+
 
 
 # Load dataset
@@ -114,15 +116,27 @@ numerical_cols = df.select_dtypes(include=[np.number])
 correlation_matrix = numerical_cols.corr()
 
 # Set up the matplotlib figure
-plt.figure(figsize=(12, 8))
+plt.figure(figsize=(14, 10))
 
-# Draw the heatmap
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', linewidths=0.5)
+# Draw the heatmap with improved aesthetics
+sns.heatmap(
+    correlation_matrix, 
+    annot=True, 
+    fmt='.2f', # Format annotations to 2 decimal places
+    cmap='viridis', # Use a perceptually uniform color map
+    linewidths=0.5, 
+    linecolor='black', # Line color to separate cells
+    cbar_kws={'shrink': .75}, # Adjust color bar size
+    annot_kws={"size": 10, "weight": "bold"} # Annotation font size and weight
+)
 
-# Set the title for better presentation
-plt.title('Correlation Matrix of Numerical Features', fontsize=16)
+# Improve the layout
+plt.title('Correlation Matrix of Numerical Features', fontsize=18, weight='bold')
+plt.xticks(rotation=45, ha='right') # Rotate x-axis labels for better readability
+plt.yticks(rotation=0) # Keep y-axis labels horizontal
 
 # Display the plot
+plt.tight_layout() # Adjust layout to prevent clipping
 plt.show()
 
 # Feature engineering
@@ -158,11 +172,22 @@ fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows), constrained_l
 # Flatten axes array for easy iteration
 axes = axes.flatten()
 
+# Custom bright colors for boxplots
+colors = sns.color_palette("bright", n_colors=len(features_to_check))
+
 # Plot boxplots for each feature
 for i, feature in enumerate(features_to_check):
-    sns.boxplot(data=df_relevant, x=feature, ax=axes[i])
-    axes[i].set_title(f'Boxplot of {feature}')
+    sns.boxplot(
+        data=df_relevant,
+        x=feature,
+        ax=axes[i],
+        color=colors[i]  # Apply bright color directly
+    )
+    axes[i].set_title(f'Boxplot of {feature}', fontsize=14, weight='bold')
     axes[i].set_xlabel('')
+    axes[i].set_ylabel('Value', fontsize=12)
+    axes[i].tick_params(axis='both', which='major', labelsize=10)
+    axes[i].grid(True, linestyle='--', alpha=0.7)  # Add grid lines for better readability
 
 # Remove empty subplots if any
 for j in range(i + 1, len(axes)):
@@ -185,17 +210,38 @@ print(f"Data shape after outlier removal: {df_relevant_no_outliers.shape}")
 features_to_plot = ['Age', 'Duration', 'ClaimSeverity', 'LifetimeValue', 'CustomerTenure', 'AverageClaimAmount']
 
 # Set up the matplotlib figure
-fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(18, 10))
+fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(18, 12))
 axes = axes.flatten()
 
-for i, feature in enumerate(features_to_plot):
-    sns.histplot(df_relevant[feature], kde=True, bins=30, ax=axes[i])
-    axes[i].set_title(f'Distribution of {feature}', fontsize=10)
-    axes[i].set_xlabel(feature, fontsize=8)
-    axes[i].set_ylabel('Frequency', fontsize=8)
-    axes[i].tick_params(axis='both', which='major', labelsize=6)
+# Custom color palette for histograms
+colors = sns.color_palette("Set2", n_colors=len(features_to_plot))
 
-plt.tight_layout(pad=3.0)
+for i, feature in enumerate(features_to_plot):
+    # Plot histogram
+    axes[i].hist(
+        df_relevant[feature], 
+        bins=30, 
+        color=colors[i], 
+        alpha=0.6, 
+        density=True, 
+        edgecolor='black'
+    )
+    
+    # Compute and plot KDE
+    data = df_relevant[feature].dropna()
+    kde = gaussian_kde(data)
+    x = np.linspace(data.min(), data.max(), 1000)
+    axes[i].plot(x, kde(x), color='black', linestyle='--', linewidth=2)
+
+    # Customize titles and labels
+    axes[i].set_title(f'Distribution of {feature}', fontsize=14, weight='bold')
+    axes[i].set_xlabel(feature, fontsize=12)
+    axes[i].set_ylabel('Density', fontsize=12)
+    axes[i].tick_params(axis='both', which='major', labelsize=10)
+    axes[i].grid(True, linestyle='--', alpha=0.7)  # Add grid lines for better readability
+
+# Improve the layout
+plt.tight_layout(pad=4.0)
 plt.show()
 
 # Encode categorical variables
@@ -223,17 +269,35 @@ df_relevant_scaled['PC2'] = X_pca[:, 1]
 df_relevant_scaled['PC3'] = X_pca[:, 2]
 
 # Elbow method for optimal number of clusters
+# Calculate SSE for each number of clusters
 SSE = []
 for cluster in range(1, 10):
-    kmeans = KMeans(n_clusters=cluster, init='k-means++')
+    kmeans = KMeans(n_clusters=cluster, init='k-means++', random_state=42)
     kmeans.fit(df_relevant_scaled[['PC1', 'PC2', 'PC3']])
     SSE.append(kmeans.inertia_)
 
-plt.figure(figsize=(12, 6))
-plt.plot(range(1, 10), SSE, marker='o')
-plt.xlabel('Number of clusters')
-plt.ylabel('Inertia')
-plt.title('Elbow Method for Optimal Number of Clusters')
+# Plot the SSE values
+plt.figure(figsize=(14, 8))
+plt.plot(range(1, 10), SSE, marker='o', linestyle='-', color='b', markersize=8, linewidth=2)
+
+# Annotate SSE values
+for i, sse in enumerate(SSE):
+    plt.text(i + 1, sse, f'{sse:.2f}', fontsize=10, ha='right', va='bottom')
+
+# Add vertical line at the "elbow" point (optional, adjust if needed)
+elbow_point = 3  # Example elbow point, adjust according to your plot
+plt.axvline(x=elbow_point, color='r', linestyle='--', linewidth=1, label='Optimal Clusters')
+
+# Improve labels and title
+plt.xlabel('Number of Clusters', fontsize=14)
+plt.ylabel('Inertia', fontsize=14)
+plt.title('Elbow Method for Optimal Number of Clusters', fontsize=16, weight='bold')
+plt.xticks(range(1, 10))  # Ensure all x-ticks are visible
+plt.grid(True, linestyle='--', alpha=0.7)  # Add grid lines
+plt.legend()  # Show legend
+
+# Display the plot
+plt.tight_layout()
 plt.show()
 
 # Perform K-Means Clustering with the chosen number of clusters
@@ -258,19 +322,26 @@ plt.show()
 # Get the count of each cluster
 cluster_counts = df_relevant_scaled['KMeans_Cluster'].value_counts()
 
-# Define cluster labels and colors (optional)
-cluster_labels = ['Group1', 'Group2', 'Group3']
-colors = ['#20bf6b', '#fa8231', '#3867d6']
+# Define cluster labels and colors
+cluster_labels = [f'Group{i+1}' for i in range(len(cluster_counts))]
+colors = plt.cm.Paired(range(len(cluster_counts)))  # Use a colormap to avoid color issues
 
 # Create a pie chart
-plt.figure(figsize=(8, 8))
-plt.pie(cluster_counts, labels=cluster_labels, autopct='%1.1f%%', startangle=140, colors=colors)
+plt.figure(figsize=(10, 8))
+plt.pie(
+    cluster_counts,
+    labels=cluster_labels,
+    autopct='%1.1f%%',  # Format percentage labels
+    startangle=140,
+    colors=colors,
+    shadow=True,  # Add shadow for 3D effect
+    explode=[0.1] * len(cluster_counts)  # Optionally explode all segments equally
+)
 
 # Set title and display
-plt.title('Distribution of Clusters in KMeans')
+plt.title('Distribution of Clusters in KMeans', fontsize=16, weight='bold')
 plt.show()
-
-
+"""
 # Perform DBSCAN Clustering
 dbscan = DBSCAN(eps=0.5, min_samples=5)
 df_relevant_scaled['DBSCAN_Cluster'] = dbscan.fit_predict(df_relevant_scaled[['PC1', 'PC2', 'PC3']])
@@ -357,4 +428,4 @@ plt.title('Average Scaled Feature Values for KMeans Clusters')
 plt.xlabel('Cluster')
 plt.ylabel('Scaled Value')
 plt.legend(loc='best')
-plt.show()
+plt.show()"""
