@@ -341,7 +341,7 @@ plt.pie(
 # Set title and display
 plt.title('Distribution of Clusters in KMeans', fontsize=16, weight='bold')
 plt.show()
-"""
+
 # Perform DBSCAN Clustering
 dbscan = DBSCAN(eps=0.5, min_samples=5)
 df_relevant_scaled['DBSCAN_Cluster'] = dbscan.fit_predict(df_relevant_scaled[['PC1', 'PC2', 'PC3']])
@@ -428,4 +428,4 @@ plt.title('Average Scaled Feature Values for KMeans Clusters')
 plt.xlabel('Cluster')
 plt.ylabel('Scaled Value')
 plt.legend(loc='best')
-plt.show()"""
+plt.show()
