@@ -25,6 +25,7 @@ print(df.info())
 print("\nData Description:")
 print(df.describe())
 
+
 # Renaming columns
 df.rename(columns={
     "Numéro de dossier": "PolicyNumber",
@@ -45,11 +46,28 @@ df.rename(columns={
     "Produit": "Product",
     "Encaissements": "TotalPremiums"
 }, inplace=True)
-
 # Convert date columns to datetime
 date_cols = ['DateOfBirth', 'EffectiveDate', 'ExpirationDate']
 for col in date_cols:
     df[col] = pd.to_datetime(df[col])
+
+# Select only the numerical columns for correlation matrix calculation
+numerical_cols = df.select_dtypes(include=[np.number])
+
+# Calculate the correlation matrix for numerical features
+correlation_matrix = numerical_cols.corr()
+
+# Set up the matplotlib figure
+plt.figure(figsize=(12, 8))
+
+# Draw the heatmap
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', linewidths=0.5)
+
+# Set the title for better presentation
+plt.title('Correlation Matrix of Numerical Features', fontsize=16)
+
+# Display the plot
+plt.show()
 
 # Feature engineering
 df['Age'] = (df['EffectiveDate'] - df['DateOfBirth']).dt.days // 365
@@ -66,7 +84,7 @@ df['LifetimeValue'] = df['TotalPremiums'] / (df['Duration'] + 1)  # Example calc
 df.fillna(df.mean(numeric_only=True), inplace=True)  # Fill missing numerical values with the mean
 
 # Select relevant columns for analysis
-relevant_columns = ['PolicyNumber', 'Insured', 'Gender', 'Age', 'City', 'SumInsured', 'Premium', 'MathematicalProvision', 
+relevant_columns = ['PolicyNumber', 'Insured', 'Gender', 'Age', 'City', 'Occupation', 'SumInsured', 'Premium', 'MathematicalProvision', 
                     'Product', 'TotalPremiums', 'Duration', 'ClaimSeverity', 'LifetimeValue', 'CustomerTenure', 'AverageClaimAmount']
 df_relevant = df[relevant_columns].copy()
 
@@ -163,7 +181,7 @@ plt.title('Elbow Method for Optimal Number of Clusters')
 plt.show()
 
 # Perform K-Means Clustering with the chosen number of clusters
-kmeans = KMeans(n_clusters=4, random_state=42)
+kmeans = KMeans(n_clusters=3, random_state=42)
 df_relevant_scaled['KMeans_Cluster'] = kmeans.fit_predict(df_relevant_scaled[['PC1', 'PC2', 'PC3']])
 
 # Calculate and print the silhouette score and Davies-Bouldin Index
@@ -180,6 +198,22 @@ plt.figure(figsize=(10, 8))
 sns.scatterplot(x='PC1', y='PC2', hue='KMeans_Cluster', data=df_relevant_scaled, palette='viridis')
 plt.title('K-Means Clustering on Principal Components')
 plt.show()
+
+# Get the count of each cluster
+cluster_counts = df_relevant_scaled['KMeans_Cluster'].value_counts()
+
+# Define cluster labels and colors (optional)
+cluster_labels = ['Group1', 'Group2', 'Group3']
+colors = ['#20bf6b', '#fa8231', '#3867d6']
+
+# Create a pie chart
+plt.figure(figsize=(8, 8))
+plt.pie(cluster_counts, labels=cluster_labels, autopct='%1.1f%%', startangle=140, colors=colors)
+
+# Set title and display
+plt.title('Distribution of Clusters in KMeans')
+plt.show()
+
 
 # Perform DBSCAN Clustering
 dbscan = DBSCAN(eps=0.5, min_samples=5)
@@ -200,7 +234,7 @@ plt.title('Hierarchical Clustering Dendrogram')
 plt.show()
 
 # Determine clusters from Hierarchical Clustering
-df_relevant_scaled['Hierarchical_Cluster'] = fcluster(linked, t=4, criterion='maxclust')
+df_relevant_scaled['Hierarchical_Cluster'] = fcluster(linked, t=3, criterion='maxclust')
 
 # Calculate and print the silhouette score for hierarchical clusters
 try:
@@ -238,3 +272,19 @@ shap_values = explainer.shap_values(X_test)
 plt.figure(figsize=(12, 6))
 shap.summary_plot(shap_values, X_test)
 plt.show()
+
+# Calculate the centroids for the key features
+centroids = df_relevant_scaled.groupby('KMeans_Cluster')[['Age', 'SumInsured', 'Premium', 'MathematicalProvision', 
+                                                          'Duration', 'ClaimSeverity', 'LifetimeValue', 
+                                                          'CustomerTenure', 'AverageClaimAmount']].mean()
+
+# Add the mode (most frequent value) for categorical features
+centroids['Gender'] = df_relevant_scaled.groupby('KMeans_Cluster')['Gender'].apply(lambda x: x.mode()[0])
+centroids['Occupation'] = df_relevant_scaled.groupby('KMeans_Cluster')['Occupation'].apply(lambda x: x.mode()[0])
+
+# Convert Gender encoding back to labels
+centroids['Gender'] = centroids['Gender'].replace({0: 'Female', 1: 'Male'})
+
+# Display the centroids for each cluster
+print("Centroid values for each cluster:")
+print(centroids)
