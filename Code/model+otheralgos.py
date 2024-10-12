@@ -23,7 +23,7 @@ from scipy.stats import gaussian_kde
 
 
 # Load dataset
-file = r'C:\Users\admin\Desktop\Stage4eme\Code\CompositionPortefeuille.xls'
+file = r'Code\CompositionPortefeuille.xls'
 df = pd.read_excel(file)
 
 # Describe the data
@@ -268,6 +268,25 @@ df_relevant_scaled['PC1'] = X_pca[:, 0]
 df_relevant_scaled['PC2'] = X_pca[:, 1]
 df_relevant_scaled['PC3'] = X_pca[:, 2]
 
+
+colors = ['#800080', '#FF69B4', '#1E90FF'] 
+# Create a 3D scatter plot
+fig = plt.figure(figsize=(10, 8))
+ax = fig.add_subplot(111, projection='3d')
+
+# Scatter plot of the first three principal components with pastel colors
+ax.scatter(df_relevant_scaled['PC1'], df_relevant_scaled['PC2'], df_relevant_scaled['PC3'], 
+           alpha=0.7, c=np.random.choice(colors, size=len(df_relevant_scaled)), marker='o')
+
+# Add labels and title
+ax.set_title('Exploration of Principal Components: Insights from PCA', fontsize=16)
+ax.set_xlabel('Principal Component 1', fontsize=14)
+ax.set_ylabel('Principal Component 2', fontsize=14)
+ax.set_zlabel('Principal Component 3', fontsize=14)
+
+# Show the plot
+plt.show()
+"""
 # Elbow method for optimal number of clusters
 # Calculate SSE for each number of clusters
 SSE = []
@@ -428,4 +447,4 @@ plt.title('Average Scaled Feature Values for KMeans Clusters')
 plt.xlabel('Cluster')
 plt.ylabel('Scaled Value')
 plt.legend(loc='best')
-plt.show()
+plt.show()"""
