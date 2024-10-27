@@ -286,7 +286,7 @@ ax.set_zlabel('Principal Component 3', fontsize=14)
 
 # Show the plot
 plt.show()
-"""
+
 # Elbow method for optimal number of clusters
 # Calculate SSE for each number of clusters
 SSE = []
@@ -367,11 +367,78 @@ df_relevant_scaled['DBSCAN_Cluster'] = dbscan.fit_predict(df_relevant_scaled[['P
 
 # Calculate and print DBSCAN metrics
 try:
-    dbscan_sil_score = silhouette_score(df_relevant_scaled[['PC1', 'PC2', 'PC3']], df_relevant_scaled['DBSCAN_Cluster'])
+    # Calculate Silhouette Score (only for clusters with labels other than -1)
+    dbscan_sil_score = silhouette_score(df_relevant_scaled[df_relevant_scaled['DBSCAN_Cluster'] != -1][['PC1', 'PC2', 'PC3']],
+                                        df_relevant_scaled[df_relevant_scaled['DBSCAN_Cluster'] != -1]['DBSCAN_Cluster'])
 except ValueError:
     dbscan_sil_score = 'Not defined (noise points detected)'
 
+# Calculate Davies-Bouldin Index
+try:
+    dbscan_db_score = davies_bouldin_score(df_relevant_scaled[df_relevant_scaled['DBSCAN_Cluster'] != -1][['PC1', 'PC2', 'PC3']],
+                                           df_relevant_scaled[df_relevant_scaled['DBSCAN_Cluster'] != -1]['DBSCAN_Cluster'])
+except ValueError:
+    dbscan_db_score = 'Not defined (noise points detected)'
+
+# Calculate "inertia" as the sum of squared distances from each point to its assigned cluster centroid
+def calculate_inertia(data, labels):
+    unique_labels = np.unique(labels)
+    inertia = 0
+    for label in unique_labels:
+        if label == -1:  # Skip noise points
+            continue
+        cluster_points = data[labels == label]
+        centroid = cluster_points.mean(axis=0)
+        inertia += np.sum((cluster_points - centroid) ** 2)
+    return inertia
+
+dbscan_inertia = calculate_inertia(df_relevant_scaled[['PC1', 'PC2', 'PC3']].values, df_relevant_scaled['DBSCAN_Cluster'].values)
+
+# Print the results
 print(f'DBSCAN Silhouette Score: {dbscan_sil_score}')
+print(f'DBSCAN Davies-Bouldin Index: {dbscan_db_score}')
+print(f'DBSCAN Inertia (Sum of Squared Distances to Centroid): {dbscan_inertia}')
+
+# Set the style
+plt.style.use('ggplot')
+
+# Create a 2D density plot
+plt.figure(figsize=(10, 7))
+
+# Create a density plot using seaborn
+sns.kdeplot(
+    data=df_relevant_scaled, 
+    x='PC1', 
+    y='PC2', 
+    cmap='Blues',  # Color map for density
+    fill=True,     # Fill the density contours
+    alpha=0.5,     # Transparency of the fill
+    thresh=0.05    # Threshold for drawing contours
+)
+
+# Overlay the clusters
+clusters = df_relevant_scaled['DBSCAN_Cluster']
+sns.scatterplot(
+    data=df_relevant_scaled,
+    x='PC1',
+    y='PC2',
+    hue=clusters,
+    palette='Set2',
+    edgecolor='k',  # Black edges for better visibility
+    alpha=0.7,
+    s=50,  # Size of the points
+    legend='full'
+)
+
+# Add plot labels and title
+plt.title('DBSCAN Clustering Density Plot (PC1 vs. PC2)', fontsize=15)
+plt.xlabel('PC1', fontsize=12)
+plt.ylabel('PC2', fontsize=12)
+
+# Show plot
+plt.tight_layout()
+plt.show()
+
 
 # Perform Hierarchical Clustering
 linked = linkage(df_relevant_scaled[['PC1', 'PC2', 'PC3']], method='ward')
@@ -382,13 +449,34 @@ plt.show()
 # Determine clusters from Hierarchical Clustering
 df_relevant_scaled['Hierarchical_Cluster'] = fcluster(linked, t=3, criterion='maxclust')
 
-# Calculate and print the silhouette score for hierarchical clusters
+# Calculate Silhouette Score
 try:
     hier_sil_score = silhouette_score(df_relevant_scaled[['PC1', 'PC2', 'PC3']], df_relevant_scaled['Hierarchical_Cluster'])
 except ValueError:
-    hier_sil_score = 'Not defined (noise points detected)'
+    hier_sil_score = 'Not defined (single cluster detected)'
 
+# Calculate Davies-Bouldin Index
+try:
+    hier_db_score = davies_bouldin_score(df_relevant_scaled[['PC1', 'PC2', 'PC3']], df_relevant_scaled['Hierarchical_Cluster'])
+except ValueError:
+    hier_db_score = 'Not defined (single cluster detected)'
+
+# Calculate "inertia" as the sum of squared distances from each point to its assigned cluster centroid
+def calculate_inertia(data, labels):
+    unique_labels = np.unique(labels)
+    inertia = 0
+    for label in unique_labels:
+        cluster_points = data[labels == label]
+        centroid = cluster_points.mean(axis=0)
+        inertia += np.sum((cluster_points - centroid) ** 2)
+    return inertia
+
+hier_inertia = calculate_inertia(df_relevant_scaled[['PC1', 'PC2', 'PC3']].values, df_relevant_scaled['Hierarchical_Cluster'].values)
+
+# Print the results
 print(f'Hierarchical Clustering Silhouette Score: {hier_sil_score}')
+print(f'Hierarchical Clustering Davies-Bouldin Index: {hier_db_score}')
+print(f'Hierarchical Clustering Inertia (Sum of Squared Distances to Centroid): {hier_inertia}')
 
 # Visualize the Hierarchical Clusters
 plt.figure(figsize=(10, 8))
@@ -447,4 +535,4 @@ plt.title('Average Scaled Feature Values for KMeans Clusters')
 plt.xlabel('Cluster')
 plt.ylabel('Scaled Value')
 plt.legend(loc='best')
-plt.show()"""
+plt.show()
