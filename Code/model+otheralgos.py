@@ -122,12 +122,12 @@ plt.figure(figsize=(14, 10))
 sns.heatmap(
     correlation_matrix, 
     annot=True, 
-    fmt='.2f', # Format annotations to 2 decimal places
-    cmap='viridis', # Use a perceptually uniform color map
+    fmt='.2f', 
+    cmap='viridis', 
     linewidths=0.5, 
-    linecolor='black', # Line color to separate cells
-    cbar_kws={'shrink': .75}, # Adjust color bar size
-    annot_kws={"size": 10, "weight": "bold"} # Annotation font size and weight
+    linecolor='black', 
+    cbar_kws={'shrink': .75}, 
+    annot_kws={"size": 10, "weight": "bold"}
 )
 
 # Improve the layout
@@ -144,14 +144,14 @@ df['Age'] = (df['EffectiveDate'] - df['DateOfBirth']).dt.days // 365
 df['Duration'] = (df['ExpirationDate'] - df['EffectiveDate']).dt.days // 365
 df['Gender'] = df['Title'].apply(lambda x: 'Male' if x == 'Monsieur' else 'Female')
 df['CustomerTenure'] = (df['EffectiveDate'] - df['DateOfBirth']).dt.days // 365
-df['AverageClaimAmount'] = df['TotalPremiums'] / (df['Duration'] + 1)  # Avoid division by zero
+df['AverageClaimAmount'] = df['TotalPremiums'] / (df['Duration'] + 1)  
 
 # Adjust ClaimSeverity and LifetimeValue
-df['ClaimSeverity'] = df['SumInsured'] / df['Premium']  # Example calculation, adjust as needed
-df['LifetimeValue'] = df['TotalPremiums'] / (df['Duration'] + 1)  # Example calculation, adjust as needed
+df['ClaimSeverity'] = df['SumInsured'] / df['Premium']  
+df['LifetimeValue'] = df['TotalPremiums'] / (df['Duration'] + 1)  
 
 # Handle missing values with mean imputation
-df.fillna(df.mean(numeric_only=True), inplace=True)  # Fill missing numerical values with the mean
+df.fillna(df.mean(numeric_only=True), inplace=True)  
 
 # Select relevant columns for analysis
 relevant_columns = ['PolicyNumber', 'Insured', 'Gender', 'Age', 'City', 'Occupation', 'SumInsured', 'Premium', 'MathematicalProvision', 
@@ -238,7 +238,7 @@ for i, feature in enumerate(features_to_plot):
     axes[i].set_xlabel(feature, fontsize=12)
     axes[i].set_ylabel('Density', fontsize=12)
     axes[i].tick_params(axis='both', which='major', labelsize=10)
-    axes[i].grid(True, linestyle='--', alpha=0.7)  # Add grid lines for better readability
+    axes[i].grid(True, linestyle='--', alpha=0.7)  
 
 # Improve the layout
 plt.tight_layout(pad=4.0)
@@ -343,18 +343,18 @@ cluster_counts = df_relevant_scaled['KMeans_Cluster'].value_counts()
 
 # Define cluster labels and colors
 cluster_labels = [f'Group{i+1}' for i in range(len(cluster_counts))]
-colors = plt.cm.Paired(range(len(cluster_counts)))  # Use a colormap to avoid color issues
+colors = plt.cm.Paired(range(len(cluster_counts)))  
 
 # Create a pie chart
 plt.figure(figsize=(10, 8))
 plt.pie(
     cluster_counts,
     labels=cluster_labels,
-    autopct='%1.1f%%',  # Format percentage labels
+    autopct='%1.1f%%',
     startangle=140,
     colors=colors,
-    shadow=True,  # Add shadow for 3D effect
-    explode=[0.1] * len(cluster_counts)  # Optionally explode all segments equally
+    shadow=True,  
+    explode=[0.1] * len(cluster_counts) 
 )
 
 # Set title and display
@@ -410,10 +410,10 @@ sns.kdeplot(
     data=df_relevant_scaled, 
     x='PC1', 
     y='PC2', 
-    cmap='Blues',  # Color map for density
-    fill=True,     # Fill the density contours
-    alpha=0.5,     # Transparency of the fill
-    thresh=0.05    # Threshold for drawing contours
+    cmap='Blues',  
+    fill=True,    
+    alpha=0.5,     
+    thresh=0.05    
 )
 
 # Overlay the clusters
@@ -424,9 +424,9 @@ sns.scatterplot(
     y='PC2',
     hue=clusters,
     palette='Set2',
-    edgecolor='k',  # Black edges for better visibility
+    edgecolor='k',  
     alpha=0.7,
-    s=50,  # Size of the points
+    s=50,  
     legend='full'
 )
 
@@ -487,7 +487,7 @@ plt.show()
 
 # Random Forest Regressor Setup
 X = df_relevant_scaled.drop(['PolicyNumber', 'Insured', 'Gender', 'City', 'Product', 'KMeans_Cluster', 'DBSCAN_Cluster', 'Hierarchical_Cluster'], axis=1)
-y = df_relevant_scaled['Premium']  # Assuming Premium is the target variable
+y = df_relevant_scaled['Premium']  
 
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
@@ -508,9 +508,6 @@ plt.figure(figsize=(12, 6))
 shap.summary_plot(shap_values, X_test)
 plt.show()
 
-# Assume df_original contains the original unscaled data
-# and df_relevant_scaled contains the scaled data with KMeans clusters
-
 # Add KMeans cluster labels from the scaled data to the original data
 df_relevant['KMeans_Cluster'] = df_relevant_scaled['KMeans_Cluster']
 
@@ -519,7 +516,6 @@ original_features_summary = df_relevant.groupby('KMeans_Cluster')[['Age', 'Durat
 
 print("\nOriginal Numerical Features Summary for KMeans Clustering:")
 print(original_features_summary)
-
 
 # Calculate the average values for original features grouped by KMeans clusters
 features_summary = df_relevant_scaled.groupby('KMeans_Cluster')[['Gender', 'Occupation', 'City', 'Product']].mean()
@@ -544,10 +540,10 @@ avg_claim_amount = [13.38, 42.51, 530.06]
 claim_severity = [206.32, 63.87, 17.03]
 avg_age = [35.6, 54.7, 53.6]
 customer_tenure = [35.6, 54.7, 14.07]
-sum_insured = [16045.62, 14187.17, 142214.29]  # New feature added
+sum_insured = [16045.62, 14187.17, 142214.29]  
 
 # Create subplots for visual representation
-fig, ax = plt.subplots(3, 2, figsize=(12, 15))  # Adjusted figure size
+fig, ax = plt.subplots(3, 2, figsize=(12, 15))  
 
 # Bar graph for average premium
 ax[0, 0].bar(clusters, avg_premium, color='lightblue', edgecolor='black')
@@ -580,5 +576,5 @@ ax[2, 1].set_title('Sum Insured by Cluster', fontsize=12)
 ax[2, 1].set_ylabel('Sum Insured', fontsize=10)
 
 # Adjust layout for better spacing
-plt.tight_layout(pad=3.0)  # Increase padding between subplots
+plt.tight_layout(pad=3.0)  
 plt.show()
