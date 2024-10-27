@@ -536,3 +536,49 @@ plt.xlabel('Cluster')
 plt.ylabel('Scaled Value')
 plt.legend(loc='best')
 plt.show()
+
+# Sample data for the clusters
+clusters = ['Cluster 0', 'Cluster 1', 'Cluster 2']
+avg_premium = [155.90, 553.85, 7516.25]
+avg_claim_amount = [13.38, 42.51, 530.06]
+claim_severity = [206.32, 63.87, 17.03]
+avg_age = [35.6, 54.7, 53.6]
+customer_tenure = [35.6, 54.7, 14.07]
+sum_insured = [16045.62, 14187.17, 142214.29]  # New feature added
+
+# Create subplots for visual representation
+fig, ax = plt.subplots(3, 2, figsize=(12, 15))  # Adjusted figure size
+
+# Bar graph for average premium
+ax[0, 0].bar(clusters, avg_premium, color='lightblue', edgecolor='black')
+ax[0, 0].set_title('Average Premium by Cluster', fontsize=12)
+ax[0, 0].set_ylabel('Average Premium', fontsize=10)
+
+# Bar graph for average claim amount
+ax[0, 1].bar(clusters, avg_claim_amount, color='lightcoral', edgecolor='black')
+ax[0, 1].set_title('Average Claim Amount by Cluster', fontsize=12)
+ax[0, 1].set_ylabel('Average Claim Amount', fontsize=10)
+
+# Bar graph for claim severity
+ax[1, 0].bar(clusters, claim_severity, color='lightgreen', edgecolor='black')
+ax[1, 0].set_title('Claim Severity by Cluster', fontsize=12)
+ax[1, 0].set_ylabel('Claim Severity', fontsize=10)
+
+# Bar graph for average age
+ax[1, 1].bar(clusters, avg_age, color='lavender', edgecolor='black')
+ax[1, 1].set_title('Average Age by Cluster', fontsize=12)
+ax[1, 1].set_ylabel('Average Age', fontsize=10)
+
+# Bar graph for customer tenure
+ax[2, 0].bar(clusters, customer_tenure, color='peachpuff', edgecolor='black')
+ax[2, 0].set_title('Customer Tenure by Cluster', fontsize=12)
+ax[2, 0].set_ylabel('Customer Tenure (months)', fontsize=10)
+
+# Bar graph for Sum Insured
+ax[2, 1].bar(clusters, sum_insured, color='lightyellow', edgecolor='black')
+ax[2, 1].set_title('Sum Insured by Cluster', fontsize=12)
+ax[2, 1].set_ylabel('Sum Insured', fontsize=10)
+
+# Adjust layout for better spacing
+plt.tight_layout(pad=3.0)  # Increase padding between subplots
+plt.show()
